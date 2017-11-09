@@ -1,0 +1,17 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "PlatformIO",
+            "args": [
+                "run"
+            ],
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "presentation": {
+                "panel": "new"
+            }
+        }
+    ]
+}

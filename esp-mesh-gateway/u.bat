@@ -1,0 +1,1 @@
+platformio run -t upload 
