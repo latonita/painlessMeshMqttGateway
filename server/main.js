@@ -1,22 +1,17 @@
+const config = require("./config.js").config;
 
 const eventsModule = require("events");
 const ee = new eventsModule.EventEmitter();
 
 const slipModule = require("serialport-slip");
-const slip = new slipModule("COM6", {
-  baudRate: 115200
-});
+const slip = new slipModule(config.serial.port, {baudRate: config.serial.baud});
 var slipCommandBuffer = "";
 
-
-const MQTT_IN_PREFIX = "mesh-in/";
-const MQTT_OUT_PREFIX = "mesh-out/";
-
 const mqttModule = require("mqtt");
-const mqtt = mqttModule.connect('mqtt://tank.local:1883', {
+const mqtt = mqttModule.connect(config.mqtt.server, {
   will: {
-    topic: MQTT_OUT_PREFIX + "gateway/$online",
-    payload: "offline"
+    topic: config.topic.PREFIX_OUT + config.topic.GATEWAY_ID + "/" + config.topic.ONLINE,
+    payload: config.payload.OFFLINE
   }
 });
 
@@ -34,13 +29,13 @@ var gwStat = {
 }
 
 function gwAnnounce() {
-  mqtt.publish(MQTT_OUT_PREFIX + "gateway/$online", "online");
-  mqtt.publish(MQTT_OUT_PREFIX + "gateway/status", JSON.stringify(gwStat));
+  mqtt.publish(config.topic.PREFIX_OUT + config.topic.GATEWAY_ID + "/" + config.topic.ONLINE, config.payload.ONLINE);
+  mqtt.publish(config.topic.PREFIX_OUT + config.topic.GATEWAY_ID + "/" + config.topic.STATUS, JSON.stringify(gwStat));
 }
 
 mqtt.on('connect', () => {
   gwAnnounce();
-  mqtt.subscribe(MQTT_IN_PREFIX + "#");
+  mqtt.subscribe(config.topic.PREFIX_IN + "#");
 });
 
 mqtt.on('message', (topic, message) => {
@@ -49,15 +44,15 @@ mqtt.on('message', (topic, message) => {
 
   gwStat.mqtt.received++;
   
-  if (topic.startsWith(MQTT_IN_PREFIX)) {
-    var topic = topic.slice(MQTT_IN_PREFIX.length);
+  if (topic.startsWith(config.topic.PREFIX_IN)) {
+    var topic = topic.slice(config.topic.PREFIX_IN.length);
     var recepient = topic.slice(0, topic.indexOf("/"));
 
     switch(recepient) {
       case "gateway": {
         var sub = topic.slice(topic.indexOf("/") + 1);        
         console.log("[OK] Gateway control. sub = " + sub);
-        if (sub === "status") {
+        if (sub === config.topic.STATUS) {
           gwAnnounce();          
         }
         break;
@@ -66,7 +61,6 @@ mqtt.on('message', (topic, message) => {
       default: 
         if (/^(\-|\+)?([0-9]+|Infinity)$/.test(recepient)) {
           //var nodeId = Number(recepient);
-//          console.log("[OK] Topic = " + topic + ", payload = " + payload);
           ee.emit('slip_send', topic, payload);
         } else {
           console.log("[ERROR] Impossible nodeId");
@@ -94,8 +88,8 @@ ee.on("slip_received", (cmd) => {
   try {
     var obj = JSON.parse(cmd);
     if (mqtt.connected === true) {
-      mqtt.publish(MQTT_OUT_PREFIX + obj["topic"], obj["payload"].toString());
-      console.log("[>> MQTT] " + MQTT_OUT_PREFIX + obj["topic"]);
+      mqtt.publish(config.topic.PREFIX_OUT + obj["topic"], obj["payload"].toString());
+      console.log("[>> MQTT] " + config.topic.PREFIX_OUT + obj["topic"]);
       gwStat.mesh.relayed++;
     } else {
       gwStat.mesh.dropped++;
