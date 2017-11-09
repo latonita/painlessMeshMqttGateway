@@ -78,7 +78,7 @@ ee.on("slip_send" , (topic, payload) => {
   }
   var str = JSON.stringify(obj);
   console.log("[>> MESH] " + str);
-  slip.sendMessage(Buffer.from(str,"utf8"));
+  slip.sendMessageAndDrain(Buffer.from(str,"utf8"));
   gwStat.mqtt.relayed++;
 });
 
@@ -88,7 +88,7 @@ ee.on("slip_received", (cmd) => {
   try {
     var obj = JSON.parse(cmd);
     if (mqtt.connected === true) {
-      mqtt.publish(config.topic.PREFIX_OUT + obj["topic"], obj["payload"].toString());
+      mqtt.publish(config.topic.PREFIX_OUT + obj["topic"], JSON.stringify(obj["payload"]));
       console.log("[>> MQTT] " + config.topic.PREFIX_OUT + obj["topic"]);
       gwStat.mesh.relayed++;
     } else {
