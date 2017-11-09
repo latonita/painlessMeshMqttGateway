@@ -61,7 +61,7 @@ void setup() {
     slip.begin(115200);
     //mesh.setDebugMsgTypes( ERROR | CONNECTION | S_TIME );  // set before init() so that you can see startup messages
 
-    mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 6 );
+    mesh.init( MESH_SSID, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 6 );
     mesh.onReceive(&onMeshMessageReceived);
 
     mesh.onNewConnection([](size_t nodeId) {
