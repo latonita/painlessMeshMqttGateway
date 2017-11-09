@@ -1,0 +1,21 @@
+{
+  "name": "painlessmesh-mqtt-gate",
+  "version": "1.0.0",
+  "description": "",
+  "author": {
+    "name": "Anton Viktorov",
+    "email": "latonita@yandex.ru",
+    "url": "https://github.com/latonita"
+  },
+  "main": "main.js",
+  "dependencies": {
+    "buffertools":"^2.1.6",
+    "underscore": "1.8.3",
+    "serialport":"^6.0.4",
+    "serialport-slip":"https://github.com/BorisChumichev/node-serialport-slip#eef7783",
+    "mqtt":"^2.14.0"
+  },
+  "devDependencies": {},
+  "scripts": {},
+  "license": "MIT"
+}
