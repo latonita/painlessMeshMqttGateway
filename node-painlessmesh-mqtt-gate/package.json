@@ -1,13 +1,19 @@
 {
-  "name": "painlessmesh-mqtt-gate",
+  "name": "node-painlessmesh-mqtt-gate",
   "version": "1.0.0",
   "description": "",
+  "homepage":"https://gitlab.com/latonita/painlessMeshMqttGateway",
+  "license": "MIT",
+  "repository": {
+    "type":"git",
+    "url": "git://gitlab.com/latonita/painlessMeshMqttGateway.git"
+  },
   "author": {
     "name": "Anton Viktorov",
     "email": "latonita@yandex.ru",
     "url": "https://github.com/latonita"
   },
-  "main": "main.js",
+  "main": "app.js",
   "dependencies": {
     "buffertools":"^2.1.6",
     "underscore": "1.8.3",
@@ -16,6 +22,7 @@
     "mqtt":"^2.14.0"
   },
   "devDependencies": {},
-  "scripts": {},
-  "license": "MIT"
+  "scripts": {
+    "start": "node app.js"
+  }
 }
