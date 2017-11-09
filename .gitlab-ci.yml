@@ -5,4 +5,5 @@ before_script:
 
 linux:
   script:
-    - "platformio ci --lib="." --board=esp12e esp-mesh-gateway/src/meshGate.cpp
+    - platformio ci --lib="." --board=esp12e esp-mesh-gateway/src/meshGate.cpp
+
