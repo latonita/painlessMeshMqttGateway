@@ -4,6 +4,32 @@
 
 Gateway node in mesh network connects to mqtt gateway via serial connection.
 
+## Message relay
+### Mesh ==> MQTT
+All messages inside mesh network which sent to esp-mesh-gateway will be relayed to MQTT broker.
+Mesh message
+```
+{ "topic": "sensorName", "payload":"........." }
+```
+relayed to MQTT broker as 
+```
+{ "topic": "mesh-out/XXXX/sensorName", "payload":"........." }
+```
+where XXXX is mesh.nodeId().
+
+### MQTT ==> Mesh
+MQTT messages sent to "mesh_in/XXXX/blahblah" topics are being relayed to mesh.
+
+```
+{ "topic": "mesh-in/XXXX/sensorName", "payload":"........." }
+```
+relayed to mesh node XXXX as
+```
+{ "topic": "blahblah", "payload":"........." }
+```
+MQTT messages sent to ``"mesh_in/0/bla-blah"`` topics are being relayed to all mesh nodes as a `broadcast message`.
+
+
 
 ## esp-mesh-node 
 regular nodes in mesh
