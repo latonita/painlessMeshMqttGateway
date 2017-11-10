@@ -14,6 +14,10 @@ gateway node in mesh
 ## node-painlessmesh-mqtt-gate
 gateway node on server
 ### build
-1. install node.js and npm (i tried on node 8.x, npm 5.x)
+1. -- at first install node.js and npm (i tried on node 8.x, npm 5.x)
+2. cd node-painlessmesh-mqtt-gate
+3. edit config.js or export env variables (look inside file)
+3. npm install
+4. npm start
 
 
