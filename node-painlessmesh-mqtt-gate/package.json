@@ -2,10 +2,10 @@
   "name": "node-painlessmesh-mqtt-gate",
   "version": "1.0.0",
   "description": "",
-  "homepage":"https://gitlab.com/latonita/painlessMeshMqttGateway",
+  "homepage": "https://gitlab.com/latonita/painlessMeshMqttGateway",
   "license": "MIT",
   "repository": {
-    "type":"git",
+    "type": "git",
     "url": "git://gitlab.com/latonita/painlessMeshMqttGateway.git"
   },
   "author": {
@@ -15,11 +15,12 @@
   },
   "main": "app.js",
   "dependencies": {
-    "buffertools":"^2.1.6",
-    "underscore": "1.8.3",
-    "serialport":"^6.0.4",
-    "serialport-slip":"https://github.com/BorisChumichev/node-serialport-slip#eef7783",
-    "mqtt":"^2.14.0"
+    "buffertools": "^2.1.6",
+    "cobs": "^0.2.1",
+    "mqtt": "^2.14.0",
+    "serialport": "^6.0.4",
+    "serialport-slip": "https://github.com/BorisChumichev/node-serialport-slip#eef7783",
+    "underscore": "1.8.3"
   },
   "devDependencies": {},
   "scripts": {

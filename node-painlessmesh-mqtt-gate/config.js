@@ -1,7 +1,7 @@
 var config = {};
 
 config.serial = {};
-config.serial.port = process.env.MESH_SERIAL_PORT || "COM6"; // "/dev/ttyUSB3"
+config.serial.port = process.env.MESH_SERIAL_PORT || "COM3"; // "/dev/ttyUSB3"
 config.serial.baud = process.env.MESH_SERIAL_BAUD || 115200;
 
 config.mqtt = {};
