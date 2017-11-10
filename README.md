@@ -14,7 +14,7 @@ All messages inside mesh network which sent to esp-mesh-gateway will be relayed 
 
 | topic in mesh | published to MQTT topic   | comment |
 | --------------| -------------------- | ------- |
-|      abc      |   mesh-out/XXXX/abc  | where XXXX is mesh.nodeId() |
+| "abc" | "mesh-out/XXXX/abc" | where XXXX is mesh.nodeId() |
 
 
 ### MQTT ==> Mesh
@@ -22,8 +22,8 @@ Only MQTT messages sent to "mesh_in/XXXX/blahblah" topics are being relayed to m
 
 | topic in MQTT | relayed to mesh as | comment |
 | --------------| -------------------- | ------- |
-| mesh-out/XXXX/abc | abc  | direct message to node with mesh.nodeId()=XXXX |
-| mesh-out/0/abc | abc  | broadcast message to all nodes in mesh |
+| "mesh-in/0/abc" | "abc" | broadcast message to all nodes in mesh |
+| "mesh-in/XXXX/abc" | "abc" | direct message to node with mesh.nodeId()=XXXX |
 
 ## Components
 ### esp-mesh-node 
