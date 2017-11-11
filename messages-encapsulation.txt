@@ -1,0 +1,39 @@
+// 0. original painlessMesh packet (just for reference)
+{
+    "dest": 887034362,
+    "from": 37418,
+    "type": 9,
+    "msg": "The message I want to send"
+}
+
+// "msg" field used for encapsulating new messages 
+// 1. for gate announcement
+{
+    "dest": 887034362,
+    "from": 37418,
+    "type": 9,
+    "msg": {
+		"gate" : 37418
+	}
+}
+
+// 2. publish topic to MQTT
+{
+    "dest": 887034362,
+    "from": 37418,
+    "type": 9,
+    "msg": {
+		"topic" : "topic",
+		"payload" : "payload"
+	}
+}
+
+// 3. communication within mesh network
+{
+    "dest": 887034362,
+    "from": 37418,
+    "type": 9,
+    "msg": {
+		"m" : "Internal mesh. The message I want to send. "
+	}
+}

@@ -26,11 +26,11 @@ Only MQTT messages sent to "mesh_in/XXXX/blahblah" topics are being relayed to m
 | "mesh-in/XXXX/abc" | "abc" | direct message to node with mesh.nodeId()=XXXX |
 
 ## Components
-### esp-mesh-node 
+### esp-nodes\src\regular-node.cpp
 These are regular nodes in mesh. Use as a base for esp8266/esp32 devices.
-### esp-mesh-gateway
+### esp-nodes\src\gateway-node.cpp
 This is gateway node in mesh. Only one. Shall be connected to server machine via serial.
-### node-painlessmesh-mqtt-gate
+### mqtt-gateway
 This is node.js based gateway which listens to messages from serial port, relays them to MQTT and back. Can be run on any windows or linux machine which supports node.js.
 #### build procedure 
 1. -- at first install node.js and npm (i tried on node 8.x, npm 5.x)
