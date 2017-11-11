@@ -50,7 +50,7 @@ mqtt.on('message', (topic, message) => {
 
     switch(recepient) {
       case "gateway": {
-        var sub = topic.slice(topic.indexOf("/") + 1);        
+        var sub = topic.slice(topic.indexOf("/") + 1);
         console.log("[OK] Gateway control. sub = " + sub);
         if (sub === config.topic.STATUS) {
           gwAnnounce();          
@@ -60,8 +60,9 @@ mqtt.on('message', (topic, message) => {
       
       default: 
         if (/^(\-|\+)?([0-9]+|Infinity)$/.test(recepient)) {
-          //var nodeId = Number(recepient);
-          ee.emit('slip_send', topic, payload);
+          var nodeId = Number(recepient);
+          var sub = topic.slice(topic.indexOf("/") + 1);
+          ee.emit('slip_send', sub, nodeId, payload);
         } else {
           console.log("[ERROR] Impossible nodeId");
           gwStat.mqtt.dropped++;
@@ -71,9 +72,10 @@ mqtt.on('message', (topic, message) => {
   }
 );
 
-ee.on("slip_send" , (topic, payload) => {
+ee.on("slip_send" , (topic, nodeId, payload) => {
   var obj = {
     topic: topic,
+    nodeId: nodeId,
     payload: payload
   }
   var str = JSON.stringify(obj);

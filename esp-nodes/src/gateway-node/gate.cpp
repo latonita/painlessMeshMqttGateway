@@ -104,10 +104,11 @@ void onMeshMessageReceived( uint32_t from, String &msg ) {
 }
 
 void onMqttPacketReceived(const uint8_t* buffer, size_t size) {
-  //loopback test version - send everything back to mqtt
   String str;
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(buffer);
+  
+  //// TEST BEGINS
   JsonObject& out = jsonBuffer.createObject();
   if (root == JsonObject::invalid()) {
     out["topic"] = String(mesh.getNodeId()) + "/error";
@@ -118,13 +119,18 @@ void onMqttPacketReceived(const uint8_t* buffer, size_t size) {
     out["payload"] = root;
     out.printTo(str);
   }
-/*        if (String("logServer").equals(root["topic"].as<String>())) {
-            // check for on: true or false
-            logServerId = root["nodeId"];
-            Serial.printf("logServer detected!!!\n");
-        }
-        Serial.printf("Handled from %u msg=%s\n", from, msg.c_str());
- */
-
+  // as a test just send it back to mqtt
   slip.send((const uint8_t*)str.c_str(), str.length());
+  //// TEST ENDS
+  // now goes real stuff
+  if (root != JsonObject::invalid()) {
+      size_t to = root["nodeId"]; //todo: better double check it is integer
+      root.remove("nodeId");
+      root.printTo(str);
+      if (to == 0) {
+          mesh.sendBroadcast(str);    
+      } else {
+          mesh.sendSingle(to, str);
+      }
+  }
 }
