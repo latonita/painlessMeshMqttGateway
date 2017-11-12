@@ -1,3 +1,5 @@
+#ifdef BUILD_NODE
+
 #include <Arduino.h>
 #include "painlessMesh.h"
 
@@ -5,8 +7,8 @@
 #include "..\common\mesh-config.h"
 
 Task mySensorTask(1 * 5 * 1000, TASK_FOREVER, []() {
-    String topic = "status/uptime"; // will be published to: mesh-out/{node-id}/status/uptime
-    String payload = String(millis());
+    String topic = "water"; // will be published to: mesh-out/{node-id}/status/uptime
+    String payload = String(millis()/1000);
     meshGate_sendMqtt(topic, payload);
 });
 
@@ -21,9 +23,9 @@ void onMqttMsg(String &topic, String &payload) {
 void setup() {
     Serial.begin(115200);
     Serial.println();
-    _mesh.setDebugMsgTypes( ERROR | CONNECTION | S_TIME );  // set before init() so that you can see startup messages
+//    _mesh.setDebugMsgTypes( ERROR | CONNECTION | S_TIME );  // set before init() so that you can see startup messages
     _mesh.init( MESH_SSID, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 6 );
-    meshGate_init();
+    meshGate_init(7);
     meshGate_onReceiveMeshMessage(&onMeshMsg);
     meshGate_onReceiveMqttMessage(&onMqttMsg);
     _mesh.scheduler.addTask(mySensorTask);
@@ -33,3 +35,5 @@ void setup() {
 void loop() {
     _mesh.update();
 }
+
+#endif //BUILD_NODE

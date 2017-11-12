@@ -61,28 +61,47 @@ bool meshGate_sendBroadcast(String &msg) {
     return _mesh.sendBroadcast(str);
 }
 
-bool meshGate_sendMqtt(String &topic, String &payload) {
+bool meshGate_sendToGateway(JsonObject &json) {
+  String str;
+  json.printTo(str);
+  Serial.printf("TO GW: %s\n",str.c_str());
+  if (_mqttGatewayId == 0)
+      return _mesh.sendBroadcast(str);
+  else
+      return _mesh.sendSingle(_mqttGatewayId, str);
+}
+
+bool meshGate_sendMqtt(String &topic, String &payloadString) {
     DynamicJsonBuffer jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
     root["topic"] = topic;
-    root["payload"] = payload;
 
-    String str;
-    root.printTo(str);
-    if (_mqttGatewayId == 0)
-        return _mesh.sendBroadcast(str);
+    JsonObject& payloadJson = jsonBuffer.parseObject(payloadString);
+    if (payloadJson.success())
+      root["payload"] = payloadJson;
     else
-        return _mesh.sendSingle(_mqttGatewayId, str);
+      root["payload"] = payloadString;
+    meshGate_sendToGateway(root);
+}
+
+bool meshGate_sendMqtt(String &topic, JsonObject &payloadJson) {
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& root = jsonBuffer.createObject();
+    root["topic"] = topic;
+    root["payload"] = payloadJson;
+    meshGate_sendToGateway(root);
 }
 
 Task mesGate_statusAnnouncementTask (5 * 1000, TASK_FOREVER, []() {
-    String topic = "status/uptime"; // will be published to: mesh-out/{node-id}/status/uptime
-    String payload = String(millis());
+    String topic = "status"; // will be published to: mesh-out/{node-id}/status
 
-//    payload["mem"] = ESP.getFreeHeap();
-//    payload["tasks"] = mesh.scheduler.size();
-
-    meshGate_sendMqtt(topic, payload);
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& root = jsonBuffer.createObject();
+    root["uptime"] = millis();
+    root["chipId"] = String(_mesh.getNodeId(), HEX);
+    root["free"] = ESP.getFreeHeap();
+    root["tasks"] = _mesh.scheduler.size();
+    meshGate_sendMqtt(topic, root);
 });
 
 void meshGate_init(unsigned long announceIntervalSeconds = 0) {

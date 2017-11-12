@@ -1,11 +1,13 @@
+#ifdef BUILD_GATEWAY
 #include <Arduino.h>
 #include "painlessMesh.h"
 #include "PacketSerial.h"
 
+#include "gate.h"
 #include "..\common\mesh-config.h"
 
 SLIPPacketSerial slipSerial;
-painlessMesh mesh;
+//painlessMesh mesh;
 
 // Announce ourselves in the mesh every minute
 Task meshGateAnnouncementTask(10 * 1000, TASK_FOREVER, []() {
@@ -23,23 +25,50 @@ Task mqttMeshStatusTask(1 * 10 * 1000, TASK_FOREVER, []() {
     DynamicJsonBuffer jsonBuffer;
     JsonObject& msg = jsonBuffer.createObject();
     msg["topic"] = "mesh/status";
-
     JsonObject& payload = msg.createNestedObject("payload");
-    payload["gate"] = mesh.getNodeId();
-    payload["meshSize"] = mesh.getNodeList().size();
+    msg["payload"]["gate"] = mesh.getNodeId();
+    msg["payload"]["meshSize"] = mesh.getNodeList().size() + 1;
+    // JsonObject& payload = msg.createNestedObject("payload");
+    // payload["gate"] = mesh.getNodeId();
+    // payload["meshSize"] = mesh.getNodeList().size() + 1;
 
     String str;
     msg.printTo(str);
     slipSerial.send((const uint8_t*)str.c_str(), str.length());
 });
 
+
+Task mqttNodeStatusTask (5 * 1000, TASK_FOREVER, []() {
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& root = jsonBuffer.createObject();
+    root["topic"] = String(mesh.getNodeId()) + "/status";
+    JsonObject& payload = root.createNestedObject("payload");
+    root["payload"]["uptime"] = millis();
+    root["payload"]["chipId"] = String(mesh.getNodeId(), HEX);
+    root["payload"]["free"] = ESP.getFreeHeap();
+    root["payload"]["tasks"] = mesh.scheduler.size();
+    // JsonObject& payload = root.createNestedObject("payload");
+    // payload["uptime"] = millis();
+    // payload["chipId"] = String(ESP.getChipId(), HEX);
+    // payload["free"] = ESP.getFreeHeap();
+    // payload["tasks"] = mesh.scheduler.size();
+
+    String str;
+    root.printTo(str);
+    slipSerial.send((const uint8_t*)str.c_str(), str.length());
+});
+
+
 void onMeshMessageReceived( uint32_t from, String &msg ) {
     DynamicJsonBuffer jsonBuffer;
-    JsonObject& root = jsonBuffer.parseObject(msg);
+    JsonObject& json = jsonBuffer.parseObject(msg);
     //just pass everything from mesh to mqtt gate
-    if (root.containsKey("topic")) {
-        String topic = String(from) + "/" + String(root["topic"].as<String>());
+    if (json.containsKey("topic")) {
+        String topic = String(from) + "/" + String(json["topic"].as<String>());
+//        JsonObject& payload = jsonBuffer.parseJson(json["payload"]);
+        JsonObject& root = jsonBuffer.createObject();
         root["topic"] = topic;
+        root["payload"] = json["payload"].as<JsonObject>();//payload;
 
         String str;
         root.printTo(str);
@@ -99,9 +128,13 @@ void setup() {
 
     mesh.scheduler.addTask(mqttMeshStatusTask);
     mqttMeshStatusTask.enable();
+
+    mesh.scheduler.addTask(mqttNodeStatusTask);
+    mqttNodeStatusTask.enable();
 }
 
 void loop() {
     mesh.update();
     slipSerial.update();
 }
+#endif //BUILD_GATEWAY
