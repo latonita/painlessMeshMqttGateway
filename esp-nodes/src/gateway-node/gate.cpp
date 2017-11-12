@@ -65,13 +65,9 @@ void onMeshMessageReceived( uint32_t from, String &msg ) {
     //just pass everything from mesh to mqtt gate
     if (json.containsKey("topic")) {
         String topic = String(from) + "/" + String(json["topic"].as<String>());
-//        JsonObject& payload = jsonBuffer.parseJson(json["payload"]);
-        JsonObject& root = jsonBuffer.createObject();
-        root["topic"] = topic;
-        root["payload"] = json["payload"].as<JsonObject>();//payload;
-
+        json["topic"] = topic;
         String str;
-        root.printTo(str);
+        json.printTo(str);
         slipSerial.send((const uint8_t*)str.c_str(), str.length());
     }
 }
