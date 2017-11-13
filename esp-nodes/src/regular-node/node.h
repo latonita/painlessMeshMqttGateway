@@ -64,7 +64,7 @@ bool meshGate_sendBroadcast(String &msg) {
 bool meshGate_sendToGateway(JsonObject &json) {
   String str;
   json.printTo(str);
-  Serial.printf("TO GW: %s\n",str.c_str());
+  Serial.printf("TO GW (%d): %s\n", _mqttGatewayId, str.c_str());
   if (_mqttGatewayId == 0)
       return _mesh.sendBroadcast(str);
   else
@@ -92,15 +92,22 @@ bool meshGate_sendMqtt(String &topic, JsonObject &payloadJson) {
     meshGate_sendToGateway(root);
 }
 
+
+ADC_MODE(ADC_VCC);  // to enable ESP.getVcc()
+void getNodeSystemStatus(JsonObject& payload) {
+  payload["uptime"] = millis();
+  payload["chipId"] = String(_mesh.getNodeId(), HEX);
+  payload["free"] = ESP.getFreeHeap();
+  payload["tasks"] = _mesh.scheduler.size();
+  payload["vcc"] = ESP.getVcc(); //cant get it working. getting wdt reset
+}
+
 Task mesGate_statusAnnouncementTask (5 * 1000, TASK_FOREVER, []() {
     String topic = "status"; // will be published to: mesh-out/{node-id}/status
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
-    root["uptime"] = millis();
-    root["chipId"] = String(_mesh.getNodeId(), HEX);
-    root["free"] = ESP.getFreeHeap();
-    root["tasks"] = _mesh.scheduler.size();
+    getNodeSystemStatus(root);
     meshGate_sendMqtt(topic, root);
 });
 

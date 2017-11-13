@@ -38,15 +38,30 @@ Task mqttMeshStatusTask(1 * 10 * 1000, TASK_FOREVER, []() {
 });
 
 
+//ADC_MODE(ADC_VCC);  // to enable ESP.getVcc()
+void getNodeSystemStatus(JsonObject& payload) {
+  payload["uptime"] = millis();
+  payload["chipId"] = String(mesh.getNodeId(), HEX);
+  payload["free"] = ESP.getFreeHeap();
+  payload["tasks"] = mesh.scheduler.size();
+  //payload["vcc"] = ESP.getVcc(); // nothing interesting here..
+}
+
 Task mqttNodeStatusTask (5 * 1000, TASK_FOREVER, []() {
     DynamicJsonBuffer jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
     root["topic"] = String(mesh.getNodeId()) + "/status";
+
     JsonObject& payload = root.createNestedObject("payload");
-    root["payload"]["uptime"] = millis();
-    root["payload"]["chipId"] = String(mesh.getNodeId(), HEX);
-    root["payload"]["free"] = ESP.getFreeHeap();
-    root["payload"]["tasks"] = mesh.scheduler.size();
+
+    getNodeSystemStatus(payload);
+
+
+    // root["payload"]["uptime"] = millis();
+    // root["payload"]["chipId"] = String(mesh.getNodeId(), HEX);
+    // root["payload"]["free"] = ESP.getFreeHeap();
+    // root["payload"]["tasks"] = mesh.scheduler.size();
+
     // JsonObject& payload = root.createNestedObject("payload");
     // payload["uptime"] = millis();
     // payload["chipId"] = String(ESP.getChipId(), HEX);
@@ -113,20 +128,21 @@ void setup() {
     //Serial.println();
     slipSerial.setPacketHandler(&onMqttMessageReceived);
     slipSerial.begin(115200);
-    //mesh.setDebugMsgTypes( ERROR | CONNECTION | S_TIME );  // set before init() so that you can see startup messages
+//    mesh.setDebugMsgTypes( ERROR | CONNECTION | S_TIME );  // set before init() so that you can see startup messages
     mesh.init( MESH_SSID, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 6 );
     mesh.onReceive(&onMeshMessageReceived);
     mesh.onNewConnection(&onNodeConnected);
     mesh.onDroppedConnection(&onNodeDropped);
-
-    mesh.scheduler.addTask(meshGateAnnouncementTask);
-    meshGateAnnouncementTask.enable();
 
     mesh.scheduler.addTask(mqttMeshStatusTask);
     mqttMeshStatusTask.enable();
 
     mesh.scheduler.addTask(mqttNodeStatusTask);
     mqttNodeStatusTask.enable();
+
+    mesh.scheduler.addTask(meshGateAnnouncementTask);
+    meshGateAnnouncementTask.enable();
+
 }
 
 void loop() {

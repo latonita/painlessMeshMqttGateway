@@ -7,5 +7,5 @@ before_script:
 
 linux:
   script:
-    - platformio ci --lib="." --board=esp12e esp-mesh-gateway/src/meshGate.cpp
+    - platformio ci --project-conf esp-nodes/platformio.ini esp-nodes/.
 
