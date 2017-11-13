@@ -15,12 +15,8 @@
   },
   "main": "app.js",
   "dependencies": {
-    "buffertools": "^2.1.6",
-    "cobs": "^0.2.1",
     "mqtt": "^2.14.0",
-    "serialport": "^6.0.4",
-    "serialport-slip": "https://github.com/BorisChumichev/node-serialport-slip#eef7783",
-    "underscore": "1.8.3"
+    "serialport": "^6.0.4"
   },
   "devDependencies": {},
   "scripts": {

@@ -8,6 +8,9 @@
 
 SLIPPacketSerial slipSerial;
 //painlessMesh mesh;
+void publishOnlineStatus(uint32_t nodeId, bool online);
+
+
 
 // Announce ourselves in the mesh every minute
 Task meshGateAnnouncementTask(10 * 1000, TASK_FOREVER, []() {
@@ -71,7 +74,20 @@ Task mqttNodeStatusTask (5 * 1000, TASK_FOREVER, []() {
     String str;
     root.printTo(str);
     slipSerial.send((const uint8_t*)str.c_str(), str.length());
+    publishOnlineStatus(mesh.getNodeId(),true);
+
 });
+
+void publishOnlineStatus(uint32_t nodeId, bool online) {
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& msg = jsonBuffer.createObject();
+    msg["topic"] = String(nodeId) + "/$online";
+    msg["payload"] = online ? "online" : "offline";
+
+    String str;
+    msg.printTo(str);
+    slipSerial.send((const uint8_t*)str.c_str(), str.length());
+}
 
 
 void onMeshMessageReceived( uint32_t from, String &msg ) {
@@ -103,17 +119,6 @@ void onMqttMessageReceived(const uint8_t* buffer, size_t size) {
     } else {
         // transmission/protocol problem. we shall not be here
     }
-}
-
-void publishOnlineStatus(uint32_t nodeId, bool online) {
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject& msg = jsonBuffer.createObject();
-    msg["topic"] = String(nodeId) + "/$online";
-    msg["payload"] = online ? "online" : "offline";
-
-    String str;
-    msg.printTo(str);
-    slipSerial.send((const uint8_t*)str.c_str(), str.length());
 }
 
 void onNodeConnected(uint32_t nodeId){

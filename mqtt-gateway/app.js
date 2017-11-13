@@ -3,9 +3,8 @@ const config = require("./config.js").config;
 const eventsModule = require("events");
 const ee = new eventsModule.EventEmitter();
 
-const slipModule = require("serialport-slip");
-const slip = new slipModule(config.serial.port, {baudRate: config.serial.baud});
-var slipCommandBuffer = "";
+const serialPort = require("serialport");
+const port = new serialPort(config.serial.port, {baudRate: config.serial.baud});
 
 const mqttModule = require("mqtt");
 const mqtt = mqttModule.connect(config.mqtt.server, {
@@ -72,6 +71,7 @@ mqtt.on('message', (topic, message) => {
   }
 );
 
+
 ee.on("slip_send" , (topic, nodeId, payload) => {
   var obj = {
     topic: topic,
@@ -80,12 +80,14 @@ ee.on("slip_send" , (topic, nodeId, payload) => {
   }
   var str = JSON.stringify(obj);
   console.log("[>> MESH] " + str);
-  slip.sendMessageAndDrain(Buffer.from(str,"utf8"));
+  slipSendAndDrain(str);
   gwStat.mqtt.relayed++;
 });
 
-ee.on("slip_received", (cmd) => {
+ee.on("slip_received", (packet) => {
+  var cmd = slipUnescape(packet).toString();
   gwStat.mesh.received++;
+  
   console.log("[MESH >>] " + cmd);
   try {
     var obj = JSON.parse(cmd);
@@ -103,42 +105,94 @@ ee.on("slip_received", (cmd) => {
   }
 });
 
-slip.on('message',  (message) => {
-  var commands = new Array();
-  var str = message.toString();
-  slipCommandBuffer = slipCommandBuffer.concat(str);
 
-  var firstEnd = 0;
-  firstEnd = slipCommandBuffer.indexOf(slip.endByte_);
-  if (firstEnd == -1) {
-    //dirty hack - sometimes END is ommitted by SLIP library for some unknown reason
-    //lets check if it is normal json then its command, else - continue collecting parts
-    try {
-      var js = JSON.parse(slipCommandBuffer);
-      commands.push(slipCommandBuffer);
-      slipCommandBuffer ="";
-    } catch (e) {
-      debugger;
+var dataBuf = Buffer.alloc(0);
+const SLIP_END = 192;
+const SLIP_ESC = 219;
+const SLIP_ESC_END = 220;
+const SLIP_ESC_ESC = 221;
+
+function slipUnescape(buf){
+  var res = [];
+  var esc = false;
+  for (var i = 0; i < buf.length; i++) {
+    var cur = buf[i];
+    if (esc) {
+      esc = false;
+      if (cur === SLIP_ESC_END) {
+        cur = SLIP_END;
+      } else if (cur === SLIP_ESC_ESC) {
+        cur = SLIP_ESC;
+      } else {
+        // we shall not be here. protocol error.
+        // do nothing for now...
+      }
+    } else if (cur === SLIP_ESC) {
+      esc = true;
+    } else {
+      esc = false;
+    }
+    if (!esc)
+      res.push(cur);
+  }
+  return new Buffer(res);
+}
+
+function escapeAndWrite(buf){
+  var res = [];
+  for (var i = 0; i < buf.length; i++) {
+    var cur = buf[i];
+    if (cur === SLIP_END) {
+      res.push([SLIP_ESC,SLIP_ESC_END]);
+    } else if (cur === SLIP_ESC) {
+      res.push([SLIP_ESC,SLIP_ESC_ESC]);
+    } else {
+      res.push(cur);
     }
   }
-  while (firstEnd >= 0) {
-    var cmd = slipCommandBuffer.substr(0, firstEnd);
-    if (cmd.length > 0) {
-      commands.push(cmd);
+  port.write(new Buffer(res));
+}
+
+const SLIP_END_BUF = new Buffer(SLIP_END);
+
+function slipSendAndDrain(str){
+  port.write(SLIP_END_BUF);
+  escapeAndWrite(str);
+  port.write(SLIP_END_BUF);
+  port.drain();
+}
+
+port.on('data', (data)=> {
+  if (data.length == 0)
+    return;
+
+  dataBuf = Buffer.concat([dataBuf,data]);
+  var offset = 0;
+  var packets = new Array();
+  var end = 0;
+  end = dataBuf.indexOf(SLIP_END);
+  while (end >= 0) {
+    if (end - offset > 0) {
+      var p = dataBuf.slice(offset, end);
+      packets.push(p);
     }
-    slipCommandBuffer = slipCommandBuffer.slice(firstEnd + 1);
-    firstEnd = slipCommandBuffer.indexOf(slip.endByte_);
-  }
 
-  for (cmd of commands) {
-    ee.emit('slip_received', cmd);
-  }
-})
+    offset = end + 1;
 
-slip.on('error', (err) => {
+    end = dataBuf.indexOf(SLIP_END, offset);
+  }
+  dataBuf = dataBuf.slice(offset);
+
+  for (p of packets) {
+    ee.emit('slip_received', p);
+  }
+});
+
+
+port.on('error', (err) => {
   console.log("[FATAL] " + err.toString());
 });
 
-slip.on('close', () => {
+port.on('close', () => {
   console.log("[FATAL] Disconnect. Port closed.");
 });
