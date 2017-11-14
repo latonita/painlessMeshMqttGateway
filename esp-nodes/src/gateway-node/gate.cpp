@@ -4,7 +4,7 @@
 #include "PacketSerial.h"
 
 #include "gate.h"
-#include "..\common\mesh-config.h"
+#include "../common/mesh-config.h"
 
 SLIPPacketSerial slipSerial;
 //painlessMesh mesh;

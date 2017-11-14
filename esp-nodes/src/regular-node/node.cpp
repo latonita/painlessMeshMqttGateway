@@ -4,7 +4,7 @@
 #include "painlessMesh.h"
 
 #include "node.h"
-#include "..\common\mesh-config.h"
+#include "../common/mesh-config.h"
 
 Task mySensorTask(1 * 5 * 1000, TASK_FOREVER, []() {
     String topic = "water"; // will be published to: mesh-out/{node-id}/status/uptime
