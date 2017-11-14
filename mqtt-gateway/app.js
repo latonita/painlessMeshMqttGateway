@@ -1,4 +1,5 @@
 const config = require("./config.js").config;
+const pjson = require("./package.json");
 
 const eventsModule = require("events");
 const ee = new eventsModule.EventEmitter();
@@ -113,3 +114,16 @@ slip.on('packet_received', (cmd) => {
   }
 });
 
+function printVersion() {
+    console.log("===============================================================");
+    console.log(":       MQTT Gateway for painlessMesh IoT mesh network        :");
+    console.log(": (c) Anton Viktorov, latonita@yandex.ru, github.com/latonita :");
+    console.log("===============================================================");
+    console.log("Serial port: " + config.serial.port + " @ " + config.serial.baud);
+    console.log("MQTT broker: " + config.mqtt.server);
+    console.log("Topic Out: " + config.topic.PREFIX_OUT);
+    console.log("Topic In: " + config.topic.PREFIX_IN);
+    console.log();
+}
+
+printVersion();
