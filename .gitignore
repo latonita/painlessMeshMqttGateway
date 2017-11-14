@@ -4,3 +4,7 @@ package-lock.json
 .piolibdeps
 .clang_complete
 .gcc-flags.json
+esp-nodes/.vscode/BROWSE.VC.DB
+esp-nodes/.vscode/BROWSE.VC.DB
+esp-nodes/.vscode/BROWSE.VC.DB-shm
+esp-nodes/.vscode/BROWSE.VC.DB-wal

@@ -2,6 +2,7 @@
 #define REGULAR_NODE
 
 #include "painlessMesh.h"
+#include "../common/mesh-config.h"
 
 painlessMesh _mesh;
 
@@ -10,6 +11,7 @@ typedef std::function<void (String &topic, String &payload)> mqttReceivedCallbac
 meshReceivedCallback_t _meshReceivedCallback;
 mqttReceivedCallback_t _mqttReceivedCallback;
 uint32_t _mqttGatewayId = 0;
+uint32_t _mqttGatewayLastSeen = 0;
 
 //class painlessMeshMqtt : painlessMesh {};
 // todo: refactor all, move to class
@@ -30,6 +32,7 @@ void meshGate_receivedCallback( uint32_t from, String &msg ) {
         }
     } else if (root.containsKey("gate")) {
         _mqttGatewayId = root.get<uint32_t>("gate");
+        _mqttGatewayLastSeen = millis();
     } else if (root.containsKey("topic")) {
         if (_mqttReceivedCallback) {
             String t = root.get<String>("topic");
@@ -64,6 +67,12 @@ bool meshGate_sendBroadcast(String &msg) {
 bool meshGate_sendToGateway(JsonObject &json) {
   String str;
   json.printTo(str);
+
+  if(millis() > _mqttGatewayLastSeen + GATEWAY_LOST_PERIOD ) {
+      Serial.print("GW LOST");
+      _mqttGatewayId = 0;
+  }
+
   Serial.printf("TO GW (%d): %s\n", _mqttGatewayId, str.c_str());
   if (_mqttGatewayId == 0)
       return _mesh.sendBroadcast(str);

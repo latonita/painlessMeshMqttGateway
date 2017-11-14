@@ -4,7 +4,6 @@
 #include "PacketSerial.h"
 
 #include "gate.h"
-#include "../common/mesh-config.h"
 
 SLIPPacketSerial slipSerial;
 //painlessMesh mesh;
@@ -13,7 +12,7 @@ void publishOnlineStatus(uint32_t nodeId, bool online);
 
 
 // Announce ourselves in the mesh every minute
-Task meshGateAnnouncementTask(10 * 1000, TASK_FOREVER, []() {
+Task meshGateAnnouncementTask(GATEWAY_ANNOUNCEMENT_PERIOD, TASK_FOREVER, []() {
     DynamicJsonBuffer jsonBuffer;
     JsonObject& msg = jsonBuffer.createObject();
     msg["gate"] = mesh.getNodeId();
