@@ -3,8 +3,8 @@ const config = require("./config.js").config;
 const eventsModule = require("events");
 const ee = new eventsModule.EventEmitter();
 
-const serialPort = require("serialport");
-const port = new serialPort(config.serial.port, {baudRate: config.serial.baud});
+const SerialSlip = require("./serial-slip.js");
+const slip = new SerialSlip(config.serial.port, {baudRate: config.serial.baud});
 
 const mqttModule = require("mqtt");
 const mqtt = mqttModule.connect(config.mqtt.server, {
@@ -39,7 +39,7 @@ mqtt.on('connect', () => {
 
 mqtt.on('message', (topic, message) => {
   var payload = message.toString();
-  console.log("[MQTT >>] topic = " + topic + ", payload = " + payload);
+  console.log('[MQTT >>] {"topic":"' + topic + '","payload":"' + payload + '"}');
 
   gwStat.mqtt.received++;
   
@@ -71,29 +71,37 @@ mqtt.on('message', (topic, message) => {
   }
 );
 
-
 ee.on("slip_send" , (topic, nodeId, payload) => {
+  var _payload;
+  try {
+    _payload = JSON.parse(payload);
+  } catch(e) {
+    _payload = payload;
+  }
+
   var obj = {
     topic: topic,
     nodeId: nodeId,
-    payload: payload
+    payload: _payload
   }
   var str = JSON.stringify(obj);
   console.log("[>> MESH] " + str);
-  slipSendAndDrain(str);
+  slip.sendPacketAndDrain(str);
   gwStat.mqtt.relayed++;
 });
 
-ee.on("slip_received", (packet) => {
-  var cmd = slipUnescape(packet).toString();
+slip.on('packet_received', (cmd) => {
   gwStat.mesh.received++;
   
   console.log("[MESH >>] " + cmd);
   try {
     var obj = JSON.parse(cmd);
     if (mqtt.connected === true) {
-      mqtt.publish(config.topic.PREFIX_OUT + obj["topic"], JSON.stringify(obj["payload"]));
-      console.log("[>> MQTT] " + config.topic.PREFIX_OUT + obj["topic"]);
+      var topic = config.topic.PREFIX_OUT + obj["topic"];
+      var payload = JSON.stringify(obj["payload"]);
+      mqtt.publish(topic, payload);
+      console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
+      
       gwStat.mesh.relayed++;
     } else {
       gwStat.mesh.dropped++;
@@ -105,94 +113,3 @@ ee.on("slip_received", (packet) => {
   }
 });
 
-
-var dataBuf = Buffer.alloc(0);
-const SLIP_END = 192;
-const SLIP_ESC = 219;
-const SLIP_ESC_END = 220;
-const SLIP_ESC_ESC = 221;
-
-function slipUnescape(buf){
-  var res = [];
-  var esc = false;
-  for (var i = 0; i < buf.length; i++) {
-    var cur = buf[i];
-    if (esc) {
-      esc = false;
-      if (cur === SLIP_ESC_END) {
-        cur = SLIP_END;
-      } else if (cur === SLIP_ESC_ESC) {
-        cur = SLIP_ESC;
-      } else {
-        // we shall not be here. protocol error.
-        // do nothing for now...
-      }
-    } else if (cur === SLIP_ESC) {
-      esc = true;
-    } else {
-      esc = false;
-    }
-    if (!esc)
-      res.push(cur);
-  }
-  return new Buffer(res);
-}
-
-function escapeAndWrite(buf){
-  var res = [];
-  for (var i = 0; i < buf.length; i++) {
-    var cur = buf[i];
-    if (cur === SLIP_END) {
-      res.push([SLIP_ESC,SLIP_ESC_END]);
-    } else if (cur === SLIP_ESC) {
-      res.push([SLIP_ESC,SLIP_ESC_ESC]);
-    } else {
-      res.push(cur);
-    }
-  }
-  port.write(new Buffer(res));
-}
-
-const SLIP_END_BUF = new Buffer(SLIP_END);
-
-function slipSendAndDrain(str){
-  port.write(SLIP_END_BUF);
-  escapeAndWrite(str);
-  port.write(SLIP_END_BUF);
-  port.drain();
-}
-
-port.on('data', (data)=> {
-  if (data.length == 0)
-    return;
-
-  dataBuf = Buffer.concat([dataBuf,data]);
-  var offset = 0;
-  var packets = new Array();
-  var end = 0;
-  end = dataBuf.indexOf(SLIP_END);
-  while (end >= 0) {
-    if (end - offset > 0) {
-      var p = dataBuf.slice(offset, end);
-      packets.push(p);
-    }
-
-    offset = end + 1;
-
-    end = dataBuf.indexOf(SLIP_END, offset);
-  }
-  dataBuf = dataBuf.slice(offset);
-
-  for (p of packets) {
-    ee.emit('slip_received', p);
-  }
-});
-
-
-port.on('error', (err) => {
-  console.log("[FATAL] " + err.toString());
-});
-
-port.on('close', () => {
-  console.log("[FATAL] Disconnect. Port closed.");
-});
