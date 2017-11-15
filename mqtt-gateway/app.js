@@ -102,23 +102,24 @@ slip.on('packet_received', (cmd) => {
   console.log("[MESH >>] " + cmd);
   try {
     var obj = JSON.parse(cmd);
-    var online = obj["nodes"];
-    if (online) {
+    var nodes = obj["nodes"];
+    if (nodes) {
       // we've got status info with list of online nodes
-      var offline = onlineNodes.diff(online);
+      var offline = onlineNodes.diff(nodes);
+      var online = onlineNodes.diff(offline);
       onlineNodes = online;
 
       if (mqtt.connected === true) {
         for(var i = 0; i < offline.length; i++) {
           var topic = config.topic.PREFIX_OUT + offline[i] + "/" + config.topic.ONLINE;
           var payload = config.payload.OFFLINE;
-          mqtt.publish(topic, payload);
+          mqtt.publish(topic, payload, {retain: true});
           console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
         }
         for(var i = 0; i < online.length; i++) {
           var topic = config.topic.PREFIX_OUT + online[i] + "/" + config.topic.ONLINE;
           var payload = config.payload.ONLINE;
-          mqtt.publish(topic, payload);
+          mqtt.publish(topic, payload, {retain: true});
           console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
         }
       }
