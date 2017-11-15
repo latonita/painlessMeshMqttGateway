@@ -115,6 +115,12 @@ slip.on('packet_received', (cmd) => {
           mqtt.publish(topic, payload);
           console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
         }
+        for(var i = 0; i < online.length; i++) {
+          var topic = config.topic.PREFIX_OUT + online[i] + "/" + config.topic.ONLINE;
+          var payload = config.payload.ONLINE;
+          mqtt.publish(topic, payload);
+          console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
+        }
       }
 
     } else // temp
