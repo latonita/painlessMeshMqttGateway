@@ -1,10 +1,7 @@
 #ifndef REGULAR_NODE
 #define REGULAR_NODE
 
-#include "painlessMesh.h"
-#include "../common/mesh-config.h"
-
-painlessMesh _mesh;
+#include "../common/mesh.h"
 
 typedef std::function<void (uint32_t from, String &msg)> meshReceivedCallback_t;
 typedef std::function<void (String &topic, String &payload)> mqttReceivedCallback_t;
@@ -99,16 +96,6 @@ bool meshGate_sendMqtt(String &topic, JsonObject &payloadJson) {
     root["topic"] = topic;
     root["payload"] = payloadJson;
     meshGate_sendToGateway(root);
-}
-
-
-ADC_MODE(ADC_VCC);  // to enable ESP.getVcc()
-void getNodeSystemStatus(JsonObject& payload) {
-  payload["uptime"] = millis();
-  payload["chipId"] = String(_mesh.getNodeId(), HEX);
-  payload["free"] = ESP.getFreeHeap();
-  payload["tasks"] = _mesh.scheduler.size();
-  payload["vcc"] = ESP.getVcc(); //cant get it working. getting wdt reset
 }
 
 Task mesGate_statusAnnouncementTask (5 * 1000, TASK_FOREVER, []() {
