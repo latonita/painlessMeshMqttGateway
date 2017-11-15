@@ -107,7 +107,7 @@ slip.on('packet_received', (cmd) => {
       // we've got status info with list of online nodes
       var offline = onlineNodes.diff(nodes);
       var online = onlineNodes.diff(offline);
-      onlineNodes = online;
+      onlineNodes = nodes;
 
       if (mqtt.connected === true) {
         for(var i = 0; i < offline.length; i++) {
