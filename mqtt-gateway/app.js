@@ -90,13 +90,40 @@ ee.on("slip_send" , (topic, nodeId, payload) => {
   gwStat.mqtt.relayed++;
 });
 
+Array.prototype.diff = function(a) {
+  return this.filter(function(i) {return a.indexOf(i) < 0;});
+};
+var onlineNodes = [];
+
+
 slip.on('packet_received', (cmd) => {
   gwStat.mesh.received++;
   
   console.log("[MESH >>] " + cmd);
   try {
     var obj = JSON.parse(cmd);
+    var online = obj["nodes"];
+    if (online) {
+      // we've got status info with list of online nodes
+      var offline = onlineNodes.diff(online);
+      onlineNodes = online;
+
+      if (mqtt.connected === true) {
+        for(var i = 0; i < offline.length; i++) {
+          var topic = config.topic.PREFIX_OUT + offline[i] + "/" + config.topic.ONLINE;
+          var payload = config.payload.OFFLINE;
+          mqtt.publish(topic, payload);
+          console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
+        }
+      }
+
+    } else // temp
     if (mqtt.connected === true) {
+      // publish who's offline
+
+
+
+
       var topic = config.topic.PREFIX_OUT + obj["topic"];
       var payload = JSON.stringify(obj["payload"]);
       mqtt.publish(topic, payload);

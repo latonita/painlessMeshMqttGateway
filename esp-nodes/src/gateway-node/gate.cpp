@@ -30,23 +30,33 @@ Task mqttMeshStatusTask(1 * 10 * 1000, TASK_FOREVER, []() {
     JsonObject& payload = msg.createNestedObject("payload");
     msg["payload"]["gate"] = mesh.getNodeId();
     msg["payload"]["meshSize"] = mesh.getNodeList().size() + 1;
-    // JsonObject& payload = msg.createNestedObject("payload");
-    // payload["gate"] = mesh.getNodeId();
-    // payload["meshSize"] = mesh.getNodeList().size() + 1;
-
     String str;
     msg.printTo(str);
     slipSerial.send((const uint8_t*)str.c_str(), str.length());
+
+    jsonBuffer.clear(); // mag and payload object are gone
+
+    JsonObject& msg2 = jsonBuffer.createObject();
+    JsonArray& list = msg2.createNestedArray("nodes");
+    auto nl = mesh.getNodeList();
+    for (auto const& n : mesh.getNodeList()) {
+        list.add(n);
+    }
+    list.add(mesh.getNodeId());
+
+    String str2;
+    msg2.printTo(str2);
+    slipSerial.send((const uint8_t*)str2.c_str(), str2.length());
 });
 
 
 //ADC_MODE(ADC_VCC);  // to enable ESP.getVcc()
 void getNodeSystemStatus(JsonObject& payload) {
-  payload["uptime"] = millis();
-  payload["chipId"] = String(mesh.getNodeId(), HEX);
-  payload["free"] = ESP.getFreeHeap();
-  payload["tasks"] = mesh.scheduler.size();
-  //payload["vcc"] = ESP.getVcc(); // nothing interesting here..
+    payload["uptime"] = millis();
+    payload["chipId"] = String(mesh.getNodeId(), HEX);
+    payload["free"] = ESP.getFreeHeap();
+    payload["tasks"] = mesh.scheduler.size();
+    //payload["vcc"] = ESP.getVcc(); // nothing interesting here..
 }
 
 Task mqttNodeStatusTask (5 * 1000, TASK_FOREVER, []() {
