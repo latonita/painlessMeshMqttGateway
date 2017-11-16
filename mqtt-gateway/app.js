@@ -3,8 +3,11 @@ const config = require("./config.js").config;
 const eventsModule = require("events");
 const ee = new eventsModule.EventEmitter();
 
-const SerialSlip = require("./serial-slip.js");
-const slip = new SerialSlip(config.serial.port, {baudRate: config.serial.baud});
+const SerialPort = require("serialport");
+const port = new SerialPort(config.serial.port, {baudRate: config.serial.baud});
+
+const slip = require('slip');
+const decoder = new slip.Decoder({});
 
 const mqttModule = require("mqtt");
 const mqtt = mqttModule.connect(config.mqtt.server, {
@@ -86,30 +89,42 @@ ee.on("slip_send" , (topic, nodeId, payload) => {
   }
   var str = JSON.stringify(obj);
   console.log("[>> MESH] " + str);
-  slip.sendPacketAndDrain(str);
+  var data = new Uint8Array(str.length);
+  for(var i=0,j=str.length;i<j;++i){
+    data[i]=str.charCodeAt(i);
+  }
+  var packet = slip.encode(data)
+  port.write(packet);
+  port.drain();
   gwStat.mqtt.relayed++;
 });
 
-slip.on('packet_received', (cmd) => {
-  gwStat.mesh.received++;
-  
-  console.log("[MESH >>] " + cmd);
-  try {
-    var obj = JSON.parse(cmd);
-    if (mqtt.connected === true) {
-      var topic = config.topic.PREFIX_OUT + obj["topic"];
-      var payload = JSON.stringify(obj["payload"]);
-      mqtt.publish(topic, payload);
-      console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
-      
-      gwStat.mesh.relayed++;
-    } else {
-      gwStat.mesh.dropped++;
-      console.log("[ERROR] No MQTT connection");
+
+port.on('data', (data)=>{
+    data = decoder.decode(data);
+    if (data) {
+        gwStat.mesh.received++;
+        
+        var cmd = String.fromCharCode.apply(null, data);
+        
+        console.log("[MESH >>] " + cmd);
+        try {
+          var obj = JSON.parse(cmd);
+          if (mqtt.connected === true) {
+            var topic = config.topic.PREFIX_OUT + obj["topic"];
+            var payload = JSON.stringify(obj["payload"]);
+            mqtt.publish(topic, payload);
+            console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
+            
+            gwStat.mesh.relayed++;
+          } else {
+            gwStat.mesh.dropped++;
+            console.log("[ERROR] No MQTT connection");
+          }
+        } catch (ex) {
+            console.log("[ERROR] " + ex.name + ", " + ex.message);
+            gwStat.mesh.dropped++;
+        }
     }
-  } catch (ex) {
-      console.log("[ERROR] " + ex.name + ", " + ex.message);
-      gwStat.mesh.dropped++;
-  }
 });
 
