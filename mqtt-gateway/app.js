@@ -3,8 +3,11 @@ const config = require("./config.js").config;
 const eventsModule = require("events");
 const ee = new eventsModule.EventEmitter();
 
-const SerialSlip = require("./serial-slip.js");
-const slip = new SerialSlip(config.serial.port, {baudRate: config.serial.baud});
+const SerialPort = require("serialport");
+const port = new SerialPort(config.serial.port, {baudRate: config.serial.baud});
+
+const slip = require('slip');
+const decoder = new slip.Decoder({});
 
 const mqttModule = require("mqtt");
 const mqtt = mqttModule.connect(config.mqtt.server, {
@@ -86,7 +89,13 @@ ee.on("slip_send" , (topic, nodeId, payload) => {
   }
   var str = JSON.stringify(obj);
   console.log("[>> MESH] " + str);
-  slip.sendPacketAndDrain(str);
+  var data = new Uint8Array(str.length);
+  for(var i=0,j=str.length;i<j;++i){
+    data[i]=str.charCodeAt(i);
+  }
+  var packet = slip.encode(data)
+  port.write(packet);
+  port.drain();
   gwStat.mqtt.relayed++;
 });
 
@@ -95,55 +104,54 @@ Array.prototype.diff = function(a) {
 };
 var onlineNodes = [];
 
-
-slip.on('packet_received', (cmd) => {
-  gwStat.mesh.received++;
-  
-  console.log("[MESH >>] " + cmd);
-  try {
-    var obj = JSON.parse(cmd);
-    var nodes = obj["nodes"];
-    if (nodes) {
-      // we've got status info with list of online nodes
-      var offline = onlineNodes.diff(nodes);
-      var online = onlineNodes.diff(offline);
-      onlineNodes = nodes;
-
-      if (mqtt.connected === true) {
-        for(var i = 0; i < offline.length; i++) {
-          var topic = config.topic.PREFIX_OUT + offline[i] + "/" + config.topic.ONLINE;
-          var payload = config.payload.OFFLINE;
-          mqtt.publish(topic, payload, {retain: true});
-          console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
+port.on('data', (data)=>{
+    data = decoder.decode(data);
+    if (data) {
+        gwStat.mesh.received++;
+        
+        var cmd = String.fromCharCode.apply(null, data);
+        console.log("[MESH >>] " + cmd);
+        try {
+        var obj = JSON.parse(cmd);
+        var nodes = obj["nodes"];
+        if (nodes) {
+            // we've got status info with list of online nodes
+            var offline = onlineNodes.diff(nodes);
+            var newOnline = nodes.diff(offline).diff(onlineNodes); //only new online to publish
+            onlineNodes = nodes;
+    
+            if (mqtt.connected === true) {
+                for(var i = 0; i < offline.length; i++) {
+                    var topic = config.topic.PREFIX_OUT + offline[i] + "/" + config.topic.ONLINE;
+                    var payload = config.payload.OFFLINE;
+                    mqtt.publish(topic, payload, {retain: true});
+                    console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
+                }
+                for(var i = 0; i < newOnline.length; i++) {
+                    var topic = config.topic.PREFIX_OUT + newOnline[i] + "/" + config.topic.ONLINE;
+                    var payload = config.payload.ONLINE;
+                    mqtt.publish(topic, payload, {retain: true});
+                    console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
+                }
+            }
+    
+        } else // temp
+        if (mqtt.connected === true) {
+            // publish who's offline
+    
+            var topic = config.topic.PREFIX_OUT + obj["topic"];
+            var payload = JSON.stringify(obj["payload"]);
+            mqtt.publish(topic, payload);
+            console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
+            
+            gwStat.mesh.relayed++;
+        } else {
+            gwStat.mesh.dropped++;
+            console.log("[ERROR] No MQTT connection");
         }
-        for(var i = 0; i < online.length; i++) {
-          var topic = config.topic.PREFIX_OUT + online[i] + "/" + config.topic.ONLINE;
-          var payload = config.payload.ONLINE;
-          mqtt.publish(topic, payload, {retain: true});
-          console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
+        } catch (ex) {
+            console.log("[ERROR] " + ex.name + ", " + ex.message);
+            gwStat.mesh.dropped++;
         }
-      }
-
-    } else // temp
-    if (mqtt.connected === true) {
-      // publish who's offline
-
-
-
-
-      var topic = config.topic.PREFIX_OUT + obj["topic"];
-      var payload = JSON.stringify(obj["payload"]);
-      mqtt.publish(topic, payload);
-      console.log('[>> MQTT] {"topic":"' + topic + '","payload":' + payload + '}');
-      
-      gwStat.mesh.relayed++;
-    } else {
-      gwStat.mesh.dropped++;
-      console.log("[ERROR] No MQTT connection");
     }
-  } catch (ex) {
-      console.log("[ERROR] " + ex.name + ", " + ex.message);
-      gwStat.mesh.dropped++;
-  }
 });
-
