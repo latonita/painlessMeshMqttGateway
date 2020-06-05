@@ -1,7 +1,4 @@
 # MQTT gateway for painlessMesh network
-
-# UNDER HEAVY DEVELOPMENT AT THE MOMENT.
-
 ![](overview.png)
 
 Gateway node in mesh network connects to mqtt gateway via serial connection.
